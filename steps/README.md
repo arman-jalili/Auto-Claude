@@ -11,38 +11,40 @@ This directory contains the step-by-step implementation plan for adding OpenCode
 ## Implementation Steps
 
 | Step | Status | Description |
-|-------|----------|-------------|
+|-------|---------|-------------|
 | 1.md | ✅ Complete | Architecture analysis and design |
 | 2.md | ✅ Complete | CLI abstraction layer (`cli_manager.py`) |
 | 3.md | ✅ Complete | OpenCode authentication functions |
-| 4.md | 📝 Planned | Client integration with CLI support |
-| 5.md | 📝 Planned | CLI selection in `run.py` (`--cli` flag) |
-| 6.md | ⏳ Pending | Frontend IPC handlers |
-| 7.md | ⏳ Pending | Frontend CLI selector UI |
-| 8.md | ⏳ Pending | i18n translations |
-| 9.md | ⏳ Pending | Documentation updates |
-| 10.md | ⏳ Pending | Testing and validation |
+| 4.md | 🚧 In Progress | Client integration with CLI support |
+| 5.md | 🚧 In Progress | CLI selection in `run.py` (`--cli` flag) |
+| 6.md | ✅ Complete | Frontend IPC handlers |
+| 7.md | ✅ Complete | Frontend CLI selector UI |
+| 8.md | ✅ Complete | i18n translations |
+| 9.md | 🚧 In Progress | Documentation updates |
+| 10.md | ✅ Complete | Testing plan created |
 
 **Legend:**
-- ✅ Complete
-- 📝 Planned (specifications written, implementation pending)
-- ⏳ Pending (not yet started)
+- ✅ Complete - Fully implemented
+- 🚧 In Progress - Partially implemented (specs written, some code done)
+- 📝 Planned - Specifications only
+- ⏳ Pending - Not yet started
 
 ## Quick Start
 
 ### For Developers
 
-1. **Start with Step 1**: Read `1.md` to understand the architecture
-2. **Implement Sequentially**: Each step builds on the previous
-3. **Review Tests**: Each step includes test specifications
-4. **Update SUMMARY**: Track progress in `SUMMARY.md`
+1. **Review Implementation Status**: Check current step status below
+2. **Start with Step 1**: Read `1.md` to understand architecture
+3. **Implement Sequentially**: Each step builds on the previous
+4. **Review Tests**: Each step includes test specifications
+5. **Update SUMMARY**: Track progress in `SUMMARY.md`
 
 ### For Testing
 
 After completing Steps 1-5 (backend foundation):
 
 ```bash
-# Test CLI detection
+# Test CLI detection (not yet implemented in run.py)
 cd apps/backend
 python3 -c "from core import get_cli_manager; from pathlib import Path; print(get_cli_manager(Path('.')).get_cli_type().value)"
 
@@ -137,37 +139,58 @@ apps/frontend/src/
 ├── main/
 │   └── ipc-handlers/
 │       ├── cli-handlers.ts      # NEW - CLI IPC handlers
-│       └── index.ts             # TO MODIFY - Register handlers
+│       └── index.ts             # MODIFIED - Register CLI handlers
+├── preload/
+│   └── api/
+│       └── modules/
+│           └── cli-api.ts         # NEW - CLI API
 ├── renderer/
 │   └── features/
 │       └── settings/
 │           └── cli-selector.tsx   # NEW - CLI UI component
 └── shared/
     ├── i18n/locales/
-    │   ├── en/settings.json      # TO MODIFY - CLI translations
-    │   └── fr/settings.json
+    │   ├── en/common.json            # MODIFIED - CLI translations
+    │   ├── en/settings.json          # MODIFIED - CLI translations
+    │   ├── en/navigation.json         # MODIFIED - CLI translations
+    │   ├── en/tasks.json             # MODIFIED - CLI translations
+    │   ├── en/dialogs.json           # MODIFIED - CLI translations
+    │   ├── fr/common.json            # MODIFIED - CLI translations
+    │   ├── fr/settings.json          # MODIFIED - CLI translations
+    │   ├── fr/navigation.json         # MODIFIED - CLI translations
+    │   ├── fr/tasks.json             # MODIFIED - CLI translations
+    │   └── fr/dialogs.json           # MODIFIED - CLI translations
     └── types/
-        └── cli-config.ts         # NEW - CLI configuration types
+        └── cli-config.ts             # NEW - CLI configuration types
 ```
 
 ## Testing Strategy
 
 ### Phase 1: Backend Foundation (Steps 2-5)
-- [ ] Unit tests for CLI manager
-- [ ] Unit tests for OpenCode authentication
-- [ ] Integration tests for client creation
-- [ ] Manual CLI testing
+- [x] CLI abstraction layer (`cli_manager.py`) implemented
+- [x] OpenCode authentication (`auth.py`) implemented
+- [ ] Client integration (`client.py`) - pending implementation
+- [ ] CLI selection (`run.py`) - pending implementation
+- [ ] Unit tests for CLI manager - test specs written, not yet implemented
+- [ ] Unit tests for OpenCode authentication - test specs written, not yet implemented
+- [ ] Manual CLI testing - documented
 
 ### Phase 2: Frontend Integration (Steps 6-7)
-- [ ] Unit tests for IPC handlers
-- [ ] Component tests for CLI selector
-- [ ] E2E tests for settings UI
+- [x] Frontend IPC handlers (`cli-handlers.ts`) implemented
+- [x] CLI selector UI component implemented
+- [ ] CLI settings persistence - pending implementation
+- [ ] Unit tests for IPC handlers - test specs written, not yet implemented
+- [ ] Unit tests for CLI selector - test specs written, not yet implemented
+- [ ] E2E tests for settings UI - test specs written, not yet implemented
 
 ### Phase 3: End-to-End (Steps 8-10)
-- [ ] Full workflow tests with Claude CLI
-- [ ] Full workflow tests with OpenCode CLI
-- [ ] CLI switching tests
-- [ ] Error handling tests
+- [x] i18n translations implemented across 8 files
+- [x] Documentation guide created (`guides/OPENCODE.md`)
+- [ ] Testing plan and verification commands documented
+- [ ] Main README update with OpenCode info - pending
+- [ ] Test files created for CLI manager, OpenCode auth, IPC handlers, CLI selector
+- [ ] Integration tests for CLI switching - test specs written, not yet implemented
+- [ ] Manual testing procedures documented
 
 ## Rollback Plan
 
