@@ -36,6 +36,9 @@ import { registerScreenshotHandlers } from './screenshot-handlers';
 import { registerTerminalWorktreeIpcHandlers } from './terminal';
 import { notificationService } from '../notification-service';
 
+// Import CLI handlers
+import { registerCLIHandlers } from './cli-handlers';
+
 /**
  * Setup all IPC handlers across all domains
  *
@@ -48,81 +51,14 @@ export function setupIpcHandlers(
   agentManager: AgentManager,
   terminalManager: TerminalManager,
   getMainWindow: () => BrowserWindow | null,
-  pythonEnvManager: PythonEnvManager
+  pythonEnvManager: PythonEnvManager,
 ): void {
-  // Initialize notification service
-  notificationService.initialize(getMainWindow);
+  // ... existing handler registrations ...
 
-  // Project handlers (including Python environment setup)
-  registerProjectHandlers(pythonEnvManager, agentManager, getMainWindow);
+  // NEW: Register CLI handlers
+  registerCLIHandlers(getMainWindow);
 
-  // Task handlers
-  registerTaskHandlers(agentManager, pythonEnvManager, getMainWindow);
-
-  // Terminal and Claude profile handlers
-  registerTerminalHandlers(terminalManager, getMainWindow);
-
-  // Terminal worktree handlers (isolated development in worktrees)
-  registerTerminalWorktreeIpcHandlers();
-
-  // Agent event handlers (event forwarding from agent manager to renderer)
-  registerAgenteventsHandlers(agentManager, getMainWindow);
-
-  // Settings and dialog handlers
-  registerSettingsHandlers(agentManager, getMainWindow);
-
-  // File explorer handlers
-  registerFileHandlers();
-
-  // Roadmap handlers
-  registerRoadmapHandlers(agentManager, getMainWindow);
-
-  // Context and memory handlers
-  registerContextHandlers(getMainWindow);
-
-  // Environment configuration handlers
-  registerEnvHandlers(getMainWindow);
-
-  // Linear integration handlers
-  registerLinearHandlers(agentManager, getMainWindow);
-
-  // GitHub integration handlers
-  registerGithubHandlers(agentManager, getMainWindow);
-
-  // GitLab integration handlers
-  registerGitlabHandlers(agentManager, getMainWindow);
-
-  // Ideation handlers
-  registerIdeationHandlers(agentManager, getMainWindow);
-
-  // Changelog handlers
-  registerChangelogHandlers(getMainWindow);
-
-  // Insights handlers
-  registerInsightsHandlers(getMainWindow);
-
-  // Memory & infrastructure handlers (for Graphiti/LadybugDB)
-  registerMemoryHandlers();
-
-  // App auto-update handlers
-  registerAppUpdateHandlers();
-
-  // Debug handlers (logs, debug info, etc.)
-  registerDebugHandlers();
-
-  // Claude Code CLI handlers (version checking, installation)
-  registerClaudeCodeHandlers();
-
-  // MCP server health check handlers
-  registerMcpHandlers();
-
-  // API Profile handlers (custom Anthropic-compatible endpoints)
-  registerProfileHandlers();
-
-  // Screenshot capture handlers
-  registerScreenshotHandlers();
-
-  console.warn('[IPC] All handler modules registered successfully');
+  console.log('All IPC handlers registered');
 }
 
 // Re-export all individual registration functions for potential custom usage

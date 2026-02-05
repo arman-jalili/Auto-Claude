@@ -13,7 +13,9 @@ import { DebugAPI, createDebugAPI } from './modules/debug-api';
 import { ClaudeCodeAPI, createClaudeCodeAPI } from './modules/claude-code-api';
 import { McpAPI, createMcpAPI } from './modules/mcp-api';
 import { ProfileAPI, createProfileAPI } from './profile-api';
+import { CLIAPI, createCLIAPI } from './modules/cli-api';
 import { ScreenshotAPI, createScreenshotAPI } from './screenshot-api';
+import { CLIAPI, createCLIAPI } from './modules/cli-api';
 import { QueueAPI, createQueueAPI } from './queue-api';
 
 export interface ElectronAPI extends

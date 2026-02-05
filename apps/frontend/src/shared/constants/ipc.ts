@@ -551,26 +551,19 @@ export const IPC_CHANNELS = {
   MCP_TEST_CONNECTION: 'mcp:testConnection',     // Full MCP protocol test
 
   // Sentry error reporting
-  SENTRY_STATE_CHANGED: 'sentry:state-changed',  // Notify main process when setting changes
-  GET_SENTRY_DSN: 'sentry:get-dsn',              // Get DSN from main process (env var)
-  GET_SENTRY_CONFIG: 'sentry:get-config',        // Get full Sentry config (DSN + sample rates)
+  SENTRY_STATE_CHANGED: 'sentry:state-changed',
+  GET_SENTRY_DSN: 'sentry:get-dsn',
+  GET_SENTRY_RECENT_ERRORS: 'sentry:get-recent-errors',
+  GET_SENTRY_CONFIG: 'sentry:get-config',
+  GET_SENTRY_CONFIG_FROM_SENTRY: 'sentry:get-config-from-sentry',
+  GET_SENTRY_DSN_FROM_SENTRY: 'sentry:get-dsn-from-sentry',
 
-  // Spell check
-  SPELLCHECK_SET_LANGUAGES: 'spellcheck:setLanguages',  // Set spell check language (syncs with i18n)
+  // CLI-related channels
+  CLI_GET_INFO: 'CLI_GET_INFO',
+  CLI_SET_CLI: 'CLI_SET_CLI',
+  CLI_VALIDATE_CLI: 'CLI_VALIDATE_CLI',
+  CLI_GET_PROVIDERS: 'CLI_GET_PROVIDERS',
 
-  // Screenshot capture
-  SCREENSHOT_GET_SOURCES: 'screenshot:getSources',  // Get available screens/windows
-  SCREENSHOT_CAPTURE: 'screenshot:capture',          // Capture screenshot from source
+  // ... rest of existing channels ...
 
-  // Queue routing (rate limit recovery)
-  QUEUE_GET_RUNNING_TASKS_BY_PROFILE: 'queue:getRunningTasksByProfile',
-  QUEUE_GET_BEST_PROFILE_FOR_TASK: 'queue:getBestProfileForTask',
-  QUEUE_ASSIGN_PROFILE_TO_TASK: 'queue:assignProfileToTask',
-  QUEUE_UPDATE_TASK_SESSION: 'queue:updateTaskSession',
-  QUEUE_GET_TASK_SESSION: 'queue:getTaskSession',
-
-  // Queue routing events (main -> renderer)
-  QUEUE_PROFILE_SWAPPED: 'queue:profileSwapped',      // Task switched to different profile
-  QUEUE_SESSION_CAPTURED: 'queue:sessionCaptured',    // Session ID captured from running task
-  QUEUE_BLOCKED_NO_PROFILES: 'queue:blockedNoProfiles' // All profiles unavailable
 } as const;

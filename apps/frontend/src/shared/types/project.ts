@@ -28,6 +28,24 @@ export interface ProjectSettings {
   useClaudeMd?: boolean;
   /** Maximum parallel tasks allowed (default: 3) */
   maxParallelTasks?: number;
+  /** CLI configuration for AI coding agents */
+  cli?: CLISettings;
+}
+
+/** CLI settings configuration */
+export interface CLISettings {
+  /** CLI type: 'claude' or 'opencode' */
+  type: 'claude' | 'opencode';
+  /** OpenCode provider (only used when type is 'opencode') */
+  opencode?: OpenCodeProviderConfig;
+}
+
+/** OpenCode provider configuration */
+export interface OpenCodeProviderConfig {
+  /** Provider: 'claude', 'openai', 'google', 'zen', or 'local' */
+  provider?: 'claude' | 'openai' | 'google' | 'zen' | 'local';
+  /** API key (only for providers that use api_key auth type) */
+  apiKey?: string;
 }
 
 export interface NotificationSettings {

@@ -12,6 +12,7 @@ import logging
 import os
 import shutil
 import subprocess
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from core.platform import (
@@ -39,6 +40,7 @@ else:
 AUTH_TOKEN_ENV_VARS = [
     "CLAUDE_CODE_OAUTH_TOKEN",  # OAuth token from Claude Code CLI
     "ANTHROPIC_AUTH_TOKEN",  # CCR/proxy token (for enterprise setups)
+    "OPENCODE_API_KEY",  # API key for OpenCode CLI
 ]
 
 # Environment variables to pass through to SDK subprocess
@@ -1190,3 +1192,314 @@ def ensure_authenticated() -> str:
         "  3. Press Enter to open browser\n"
         "  4. Complete OAuth login in browser"
     )
+
+
+# =============================================================================
+# OpenCode Authentication Functions
+# =============================================================================
+
+def get_opencode_token(config_dir: str | None = None) -> str | None:
+    """
+    Get OpenCode authentication token.
+
+    OpenCode supports multiple authentication methods:
+    1. OPENCODE_API_KEY (direct API key environment variable)
+    2. OpenCode config in ~/.opencode/config.json
+    3. OpenCode project settings in .auto-claude/settings.json
+    4. System keychain (if OpenCode stores there)
+
+    Args:
+        config_dir: Optional config directory (currently unused for OpenCode)
+
+    Returns:
+        Token string if found, None otherwise
+    """
+    # 1. Check environment variable first (highest priority)
+    token = os.environ.get("OPENCODE_API_KEY")
+    if token:
+        logger.debug("Found OPENCODE_API_KEY in environment")
+        return token
+
+    # 2. Check OpenCode config directory (~/.opencode/)
+    opencode_config_path = Path.home() / ".opencode" / "config.json"
+    if opencode_config_path.exists():
+        try:
+            with open(opencode_config_path, encoding="utf-8") as f:
+                config = json.load(f)
+
+            # Check for different token field names
+            token = (
+                config.get("apiKey")
+                or config.get("authToken")
+                or config.get("token")
+            )
+
+            if token:
+                logger.debug(f"Found token in OpenCode config: {opencode_config_path}")
+                return token
+
+        except (json.JSONDecodeError, IOError, OSError) as e:
+            logger.debug(f"Failed to read OpenCode config: {e}")
+
+    # 3. Check .auto-claude/settings.json for OpenCode configuration
+    if config_dir:
+        settings_path = Path(config_dir) / ".auto-claude" / "settings.json"
+        if settings_path.exists():
+            try:
+                with open(settings_path, encoding="utf-8") as f:
+                    settings = json.load(f)
+
+                opencode_config = settings.get("opencode", {})
+                token = opencode_config.get("apiKey")
+
+                if token:
+                    logger.debug(f"Found OpenCode token in project settings")
+                    return token
+
+            except (json.JSONDecodeError, IOError, OSError) as e:
+                logger.debug(f"Failed to read project settings for OpenCode: {e}")
+
+    # 4. Check system keychain (if OpenCode stores there)
+    # OpenCode may use a different service name
+    try:
+        if is_macos():
+            # macOS Keychain - try OpenCode service names
+            token = _get_opencode_token_from_macos_keychain()
+            if token:
+                return token
+        elif is_windows():
+            # Windows Credential Manager
+            token = _get_opencode_token_from_windows()
+            if token:
+                return token
+        elif is_linux():
+            # Linux Secret Service
+            token = _get_opencode_token_from_linux()
+            if token:
+                return token
+    except Exception as e:
+        logger.debug(f"Failed to read OpenCode from keychain: {e}")
+
+    logger.info("No OpenCode token found")
+    return None
+
+
+def _get_opencode_token_from_macos_keychain() -> str | None:
+    """
+    Get OpenCode token from macOS Keychain.
+
+    OpenCode may use service names like:
+    - "opencode"
+    - "opencode-auth"
+    - "OpenCode"
+
+    Returns:
+        Token string if found, None otherwise
+    """
+    # Try multiple possible service names
+    service_names = [
+        "opencode",
+        "opencode-auth",
+        "OpenCode",
+    ]
+
+    for service_name in service_names:
+        try:
+            result = subprocess.run(
+                [
+                    "/usr/bin/security",
+                    "find-generic-password",
+                    "-s",
+                    service_name,
+                    "-w",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+
+            if result.returncode == 0:
+                credentials_json = result.stdout.strip()
+                if not credentials_json:
+                    continue
+
+                try:
+                    data = json.loads(credentials_json)
+                    # Try different field names
+                    token = (
+                        data.get("apiKey")
+                        or data.get("authToken")
+                        or data.get("token")
+                    )
+
+                    if token:
+                        logger.debug(f"Found OpenCode token in keychain service: {service_name}")
+                        return token
+
+                except json.JSONDecodeError:
+                    continue
+
+        except (subprocess.TimeoutExpired, subprocess.SubprocessError):
+            continue
+
+    return None
+
+
+def _get_opencode_token_from_windows() -> str | None:
+    """
+    Get OpenCode token from Windows Credential Manager.
+
+    Checks credential files in ~/.opencode/ directory.
+
+    Returns:
+        Token string if found, None otherwise
+    """
+    opencode_dir = Path.home() / ".opencode"
+    credential_files = [
+        opencode_dir / ".credentials.json",
+        opencode_dir / "credentials.json",
+        opencode_dir / "config.json",
+    ]
+
+    for cred_path in credential_files:
+        if cred_path.exists():
+            try:
+                with open(cred_path, encoding="utf-8") as f:
+                    data = json.load(f)
+
+                # Try different field names
+                token = (
+                    data.get("apiKey")
+                    or data.get("authToken")
+                    or data.get("token")
+                )
+
+                if token:
+                    logger.debug(f"Found OpenCode token in: {cred_path}")
+                    return token
+
+            except (json.JSONDecodeError, IOError):
+                continue
+
+    return None
+
+
+def _get_opencode_token_from_linux() -> str | None:
+    """
+    Get OpenCode token from Linux Secret Service API.
+
+    OpenCode may store credentials in Secret Service with
+    application attribute "opencode".
+
+    Returns:
+        Token string if found, None otherwise
+    """
+    if secretstorage is None:
+        return None
+
+    try:
+        # Get default collection
+        collection = secretstorage.get_default_collection(None)
+
+        if collection.is_locked():
+            try:
+                collection.unlock()
+            except secretstorage.exceptions.SecretStorageException:
+                return None
+
+        # Search for items with OpenCode application attribute
+        items = collection.search_items({"application": "opencode"})
+
+        for item in items:
+            # Check label to verify it's OpenCode
+            label = item.get_label()
+            if "opencode" in label.lower():
+                secret = item.get_secret()
+                if not secret:
+                    continue
+
+                try:
+                    if isinstance(secret, bytes):
+                        secret = secret.decode("utf-8")
+
+                    data = json.loads(secret)
+                    token = (
+                        data.get("apiKey")
+                        or data.get("authToken")
+                        or data.get("token")
+                    )
+
+                    if token:
+                        logger.debug(f"Found OpenCode token in secret service")
+                        return token
+
+                except (json.JSONDecodeError, UnicodeDecodeError):
+                    continue
+
+    except (
+        secretstorage.exceptions.SecretStorageNotAvailableException,
+        secretstorage.exceptions.SecretStorageException,
+        AttributeError,
+        TypeError,
+    ):
+        return None
+
+    return None
+
+
+def get_auth_token_by_cli_type(
+    cli_type: str,
+    config_dir: str | None = None,
+) -> str | None:
+    """
+    Get authentication token based on CLI type.
+
+    Args:
+        cli_type: "claude" or "opencode"
+        config_dir: Optional config directory
+
+    Returns:
+        Token string if found, None otherwise
+    """
+    if cli_type == "opencode":
+        return get_opencode_token(config_dir)
+    else:
+        return get_auth_token(config_dir)
+
+
+def trigger_opencode_login() -> bool:
+    """
+    Trigger OpenCode login/initialization.
+
+    OpenCode has its own login system that supports:
+    - GitHub Copilot (OAuth via GitHub)
+    - ChatGPT Plus/Pro (OAuth via OpenAI)
+    - OpenCode Zen (custom auth)
+    - Direct API keys
+
+    We'll guide users to run opencode CLI directly.
+
+    Returns:
+        True if login flow initiated, False otherwise
+    """
+    print("\n" + "=" * 60)
+    print("OPENCODE SETUP")
+    print("=" * 60)
+    print("\nTo set up OpenCode authentication:")
+    print("  1. Run: opencode login")
+    print("  2. Follow the prompts to authenticate:")
+    print("     - GitHub Copilot: Link your GitHub account")
+    print("     - ChatGPT: Link your OpenAI account")
+    print("     - OpenCode Zen: Sign up for OpenCode Zen")
+    print("     - API Key: Enter your API key directly")
+    print()
+    print("After authentication, run: opencode config")
+    print("To select a provider: opencode config provider <claude|openai|google|zen|local>")
+    print()
+
+    debug = os.environ.get("DEBUG", "").lower() in ("true", "1")
+    if debug:
+        print("For more information, visit: https://opencode.ai/docs")
+        print()
+
+    return False  # Users must run opencode manually
