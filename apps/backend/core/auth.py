@@ -950,27 +950,67 @@ def get_sdk_env_vars() -> dict[str, str]:
     return env
 
 
-def configure_sdk_authentication(config_dir: str | None = None) -> None:
+def configure_sdk_authentication(
+    config_dir: str | None = None, cli_type: str = "claude"
+) -> None:
     """
-    Configure SDK authentication based on environment variables.
+    Configure SDK authentication based on environment variables and CLI type.
 
-    Supports two authentication modes:
+    Supports three authentication modes:
+    - OpenCode mode (cli_type="opencode"): uses OPENCODE_API_KEY
     - API Profile mode (ANTHROPIC_BASE_URL set): uses ANTHROPIC_AUTH_TOKEN
     - OAuth mode (default): uses CLAUDE_CODE_OAUTH_TOKEN
 
-    In API profile mode, explicitly removes CLAUDE_CODE_OAUTH_TOKEN from the
-    environment because the SDK gives OAuth priority over API keys when both
+    In API profile mode, explicitly removes CLAUDE_CODE_OAUTH_TOKEN from
+    environment because SDK gives OAuth priority over API keys when both
     are present.
 
     Args:
         config_dir: Optional profile config directory for per-profile Keychain
                     lookup. When set, enables multi-profile token storage.
+        cli_type: "claude" or "opencode" - determines which CLI to use
 
     Raises:
-        ValueError: If required tokens are missing for the active mode.
+        ValueError: If required tokens are missing for active mode.
+                   - OpenCode mode: requires OPENCODE_API_KEY
                    - API profile mode: requires ANTHROPIC_AUTH_TOKEN
                    - OAuth mode: requires CLAUDE_CODE_OAUTH_TOKEN (from Keychain or env)
     """
+    # OpenCode mode: configure OpenCode authentication
+    if cli_type == "opencode":
+        opencode_token = get_opencode_token(config_dir)
+        if not opencode_token:
+            logger.warning("No OpenCode token found")
+            print("\n" + "=" * 60)
+            print("OPENCODE AUTHENTICATION REQUIRED")
+            print("=" * 60)
+            print("\nNo OpenCode authentication found.")
+            print("\nTo set up OpenCode:")
+            print("  1. Run: opencode login")
+            print("  2. Follow prompts to authenticate")
+            print("  3. Select provider: opencode config provider <claude|openai|google|zen|local>")
+            print()
+            print("Or set OPENCODE_API_KEY environment variable.")
+            print()
+            raise ValueError("OpenCode authentication required")
+
+        # Set OpenCode API key for SDK
+        os.environ["OPENCODE_API_KEY"] = opencode_token
+
+        # If using Claude provider, also set ANTHROPIC_API_KEY for compatibility
+        # OpenCode can use different providers (claude, openai, google, zen, local)
+        opencode_provider = os.environ.get("OPENCODE_PROVIDER", "claude").lower()
+        if opencode_provider == "claude":
+            # For Claude provider, we can set ANTHROPIC_API_KEY for compatibility
+            # This allows OpenCode to work with Claude models via the standard SDK
+            os.environ["ANTHROPIC_API_KEY"] = opencode_token
+            logger.info("Using OpenCode with Claude provider")
+        else:
+            logger.info(f"Using OpenCode with provider: {opencode_provider}")
+
+        return
+
+    # Claude Code modes (API profile or OAuth)
     api_profile_mode = bool(os.environ.get("ANTHROPIC_BASE_URL", "").strip())
 
     if api_profile_mode:

@@ -55,9 +55,44 @@
 
 ## Requirements
 
-- **Claude Pro/Max subscription** - [Get one here](https://claude.ai/upgrade)
-- **Claude Code CLI** - `npm install -g @anthropic-ai/claude-code`
+- **Claude Pro/Max subscription** OR **OpenCode account**
+- **Claude Code CLI** (default) - `npm install -g @anthropic-ai/claude-code`
+  OR
+- **OpenCode CLI** (alternative) - See below for installation options
 - **Git repository** - Your project must be initialized as a git repo
+
+### OpenCode CLI Installation
+
+OpenCode is an open-source alternative to Claude Code CLI with multi-provider support. Install OpenCode CLI using one of these methods:
+
+**npm (recommended):**
+```bash
+npm install -g opencode-ai
+```
+
+**Homebrew (macOS/Linux):**
+```bash
+brew install opencode
+```
+
+**Scoop (Windows):**
+```bash
+scoop install opencode
+```
+
+**bun/pnpm:**
+```bash
+bun install -g opencode-ai
+# or
+pnpm install -g opencode-ai
+```
+
+**nix:**
+```bash
+nix run nixpkgs#opencode
+```
+
+For more information on OpenCode CLI, see [guides/OPENCODE.md](guides/OPENCODE.md).
 
 ---
 
@@ -65,9 +100,29 @@
 
 1. **Download and install** the app for your platform
 2. **Open your project** - Select a git repository folder
-3. **Connect Claude** - The app will guide you through OAuth setup
-4. **Create a task** - Describe what you want to build
-5. **Watch it work** - Agents plan, code, and validate autonomously
+3. **Configure AI CLI**:
+   - **Default**: Claude Code CLI (works out of the box with your Claude subscription)
+   - **Alternative**: OpenCode CLI (install and select in Settings or via `--cli` flag)
+4. **Connect** to your chosen CLI's authentication:
+   - **Claude Code**: The app will guide you through OAuth setup
+   - **OpenCode**: Run `opencode login` and select your provider
+5. **Create a task** - Describe what you want to build
+6. **Watch it work** - Agents plan, code, and validate autonomously
+
+### CLI Selection
+
+Auto Claude supports two AI coding CLIs:
+
+- **Claude Code CLI** (default): Official CLI from Anthropic
+- **OpenCode CLI** (alternative): Open-source CLI with multi-provider support
+
+To use OpenCode CLI, either:
+- Select it in the app's Settings → AI CLI section
+- Use the `--cli opencode` flag when running from CLI
+- Set `CLI_PROVIDER=opencode` environment variable
+- Add `"cli": "opencode"` to `.auto-claude/settings.json`
+
+See [guides/OPENCODE.md](guides/OPENCODE.md) for detailed OpenCode configuration.
 
 ---
 

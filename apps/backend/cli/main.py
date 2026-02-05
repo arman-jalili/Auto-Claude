@@ -118,6 +118,22 @@ Environment Variables:
         help=f"Claude model to use (default: {DEFAULT_MODEL})",
     )
 
+    # CLI selection (for OpenCode integration)
+    parser.add_argument(
+        "--cli",
+        type=str,
+        default=None,
+        choices=["claude", "opencode"],
+        help="AI CLI to use: claude (default) or opencode",
+    )
+
+    # CLI information display
+    parser.add_argument(
+        "--info",
+        action="store_true",
+        help="Display CLI configuration and authentication information",
+    )
+
     parser.add_argument(
         "--verbose",
         action="store_true",
@@ -283,6 +299,80 @@ Environment Variables:
     return parser.parse_args()
 
 
+def print_cli_and_auth_info(project_dir: Path) -> None:
+    """Print CLI configuration and authentication information.
+
+    Displays information about the active CLI, its version, path, and
+    authentication status. This is useful for debugging and verifying setup.
+
+    Args:
+        project_dir: Path to project directory
+    """
+    from core.cli_manager import get_cli_manager, CLIType
+    from core.auth import get_auth_token_by_cli_type, trigger_opencode_login
+
+    # Get CLI manager and determine CLI type
+    cli_manager = get_cli_manager(project_dir)
+    cli_type = cli_manager.get_cli_type()
+
+    # Print header
+    print("\n" + "=" * 60)
+    print("CLI CONFIGURATION")
+    print("=" * 60)
+    print()
+
+    # Print CLI type
+    print(f"CLI Type: {cli_type.value}")
+    print(f"CLI Path: {cli_manager.get_cli_path() or 'Not found'}")
+
+    # Validate and print CLI version
+    is_valid, message = cli_manager.validate_cli()
+    if is_valid:
+        print(f"CLI Status: {message}")
+    else:
+        print(f"CLI Status: Error - {message}")
+
+    # Print authentication info
+    auth_info = cli_manager.get_auth_info()
+    print()
+    print(f"Auth Type: {auth_info['type']}")
+    print(f"Requires OAuth: {auth_info['requires_oauth']}")
+    print(f"Supports Keychain: {auth_info['supports_keychain']}")
+
+    if auth_info['type'] == 'multi_provider':
+        # OpenCode CLI - show provider info
+        opencode_provider = cli_manager.get_opencode_provider()
+        print(f"OpenCode Provider: {opencode_provider.value if opencode_provider else 'Not set'}")
+        if auth_info.get('providers'):
+            print(f"Available Providers: {', '.join(auth_info['providers'])}")
+    print()
+
+    # Print authentication status
+    token = get_auth_token_by_cli_type(cli_type.value, str(project_dir))
+    if token:
+        if auth_info['type'] == 'oauth':
+            print("✓ Authenticated (OAuth)")
+        elif auth_info['type'] == 'multi_provider':
+            print("✓ Authenticated (API Key)")
+    else:
+        print("✗ Not authenticated")
+
+    # Print guidance if not authenticated
+    if not token:
+        print()
+        print("To authenticate:")
+        if cli_type == CLIType.CLAUDE:
+            print("  Run: claude")
+            print("  Type: /login")
+        elif cli_type == CLIType.OPENCODE:
+            print("  Run: opencode login")
+            print("  Then: opencode config provider <claude|openai|google|zen|local>")
+        print()
+
+    print("=" * 60)
+    print()
+
+
 def main() -> None:
     """Main CLI entry point."""
     # Set up environment first
@@ -327,36 +417,19 @@ def _run_cli() -> None:
     # This allows get_phase_model() to fall back to task_metadata.json
     model = args.model or os.environ.get("AUTO_BUILD_MODEL")
 
-    # Handle --list command
-    if args.list:
-        print_banner()
-        print_specs_list(project_dir)
+    # Handle CLI selection for OpenCode integration
+    if args.cli:
+        # Set environment variable for CLI manager to detect
+        os.environ["CLI_PROVIDER"] = args.cli
+        debug("run.py", f"CLI type forced to: {args.cli}")
+
+    # Handle --info command (display CLI configuration)
+    if args.info:
+        print_cli_and_auth_info(project_dir)
         return
 
-    # Handle --list-worktrees command
-    if args.list_worktrees:
-        handle_list_worktrees_command(project_dir)
-        return
-
-    # Handle --cleanup-worktrees command
-    if args.cleanup_worktrees:
-        handle_cleanup_worktrees_command(project_dir)
-        return
-
-    # Handle batch commands
-    if args.batch_create:
-        handle_batch_create_command(args.batch_create, str(project_dir))
-        return
-
-    if args.batch_status:
-        handle_batch_status_command(str(project_dir))
-        return
-
-    if args.batch_cleanup:
-        handle_batch_cleanup_command(str(project_dir), dry_run=not args.no_dry_run)
-        return
-
-    # Require --spec if not listing
+    # Require --spec if not listing and not displaying info
+    if not args.spec:
     if not args.spec:
         print_banner()
         print("\nError: --spec is required")

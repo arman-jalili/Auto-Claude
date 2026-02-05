@@ -141,7 +141,10 @@ from claude_agent_sdk.types import HookMatcher
 from core.auth import (
     configure_sdk_authentication,
     get_sdk_env_vars,
+    get_auth_token_by_cli_type,
+    trigger_opencode_login,
 )
+from core.cli_manager import CLIType, get_cli_manager
 from linear_updater import is_linear_enabled
 from prompts_pkg.project_context import detect_project_capabilities, load_project_index
 from security import bash_security_hook
@@ -492,12 +495,18 @@ def create_client(
     # Collect env vars to pass to SDK (ANTHROPIC_BASE_URL, CLAUDE_CONFIG_DIR, etc.)
     sdk_env = get_sdk_env_vars()
 
-    # Get the config dir for profile-specific credential lookup
+    # Determine CLI type from CLI manager (environment or settings)
+    # This allows selecting between Claude Code and OpenCode CLIs
+    cli_manager = get_cli_manager(project_dir)
+    cli_type = cli_manager.get_cli_type().value
+
+    # Get config dir for profile-specific credential lookup
     # CLAUDE_CONFIG_DIR enables per-profile Keychain entries with SHA256-hashed service names
     config_dir = sdk_env.get("CLAUDE_CONFIG_DIR")
 
-    # Configure SDK authentication (OAuth or API profile mode)
-    configure_sdk_authentication(config_dir)
+    # Configure SDK authentication (OAuth or API profile mode or OpenCode mode)
+    # Pass CLI type to enable OpenCode authentication
+    configure_sdk_authentication(config_dir, cli_type=cli_type)
 
     if config_dir:
         logger.info(f"Using CLAUDE_CONFIG_DIR for profile: {config_dir}")

@@ -131,6 +131,77 @@ npm run package          # Package for distribution
 | Frontend E2E | `cd apps/frontend && npm run test:e2e` | Playwright |
 | All backend | `npm run test:backend` (from root) | pytest |
 
+---
+
+### CLI Selection (OpenCode Integration)
+
+Auto Claude supports two AI coding CLIs for flexibility:
+
+| CLI | Description | Providers |
+|------|-------------|-----------|
+| **Claude Code CLI** (default) | Official Anthropic CLI, Claude models only | Claude only |
+| **OpenCode CLI** (alternative) | Open-source with multi-provider support | Claude, OpenAI, Google, Zen, Local |
+
+#### Environment Variables
+
+```bash
+# Select which CLI to use
+CLI_PROVIDER=claude           # Use Claude Code CLI (default)
+CLI_PROVIDER=opencode         # Use OpenCode CLI
+
+# OpenCode-specific configuration
+OPENCODE_PROVIDER=claude       # OpenCode provider (claude, openai, google, zen, local)
+OPENCODE_API_KEY=sk-...       # OpenCode API key (or use opencode login)
+
+# Claude-specific configuration (for reference)
+CLAUDE_CODE_OAUTH_TOKEN=... # Claude Code OAuth token
+ANTHROPIC_API_KEY=...         # Direct API key (not recommended for Claude Code)
+```
+
+#### CLI Selection Methods
+
+1. **Environment Variable** (Recommended for CI/automation):
+   ```bash
+   export CLI_PROVIDER=opencode
+   python run.py --spec 001
+   ```
+
+2. **Command-Line Flag**:
+   ```bash
+   python run.py --spec 001 --cli opencode
+   ```
+
+3. **Settings File** (.auto-claude/settings.json):
+   ```json
+   {
+     "cli": "opencode",
+     "opencode": {
+       "provider": "claude"
+     }
+   }
+   ```
+
+4. **Desktop App**:
+   - Settings → AI CLI → Select "OpenCode"
+   - Configure provider and authentication in app
+
+#### CLI Information Display
+
+To check which CLI is configured:
+```bash
+# Display CLI configuration and authentication status
+python run.py --info
+```
+
+This will show:
+- CLI Type (claude or opencode)
+- CLI Path
+- CLI Status (valid or error)
+- Authentication Type
+- Authentication Status
+
+For detailed OpenCode CLI setup, see [guides/OPENCODE.md](guides/OPENCODE.md).
+
 ### Releases
 ```bash
 node scripts/bump-version.js patch|minor|major  # Bump version
